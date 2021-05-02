@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     client = docker.from_env()
     logger.info("Building image.")
-    image = client.images.build(path=path, nocache=True, tag="app")
+    client.images.build(path=path, nocache=True, tag="app")
     client.networks.create(network)
 
     for server in servers:
