@@ -13,6 +13,11 @@ jobs:
         with:
           python-version: "3.8"
 
+      - name: Clean docker
+        run: |
+          docker stop $(docker ps -a -q) || true
+          docker rm $(docker ps -a -q) || true
+
       - name: Install requirements
         run: pip install -r dev-requirements.txt
 

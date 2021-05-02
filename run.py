@@ -1,6 +1,7 @@
 import itertools
 import logging
 import os
+from time import sleep
 from typing import List, TypedDict
 
 import docker
@@ -79,7 +80,10 @@ class DockerSetup:
 
     def __exit__(self, *exc):
         logger.info("Stopping container.")
-        self.client.containers.get(self.name).stop()
+        container = self.client.containers.get(self.name)
+        container.stop()
+        print([container.name for container in self.client.containers.list()])
+        sleep(10)
 
 
 if __name__ == "__main__":
@@ -94,10 +98,11 @@ if __name__ == "__main__":
 
     client = docker.from_env()
     logger.info("Building image.")
-    # client.images.build(path=path, nocache=True)
+    image = client.images.build(path=path, nocache=True, tag="app")
+    client.networks.create(network)
 
     for server in servers:
-        logger.info("Start benchmark for %s", server["name"])
+        logger.info("Start benchmark for %s.", server["name"])
         with DockerSetup(
             client=client,
             path=path,
@@ -113,6 +118,7 @@ if __name__ == "__main__":
                     "NAME": server["name"],
                     "FILENAME": "/results/results.csv",
                 },
+                remove=True,
                 network=network,
                 volumes={
                     os.path.join(path, "scripts"): {"bind": "/scripts", "mode": "rw"},
