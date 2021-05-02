@@ -82,7 +82,6 @@ class DockerSetup:
         logger.info("Stopping container.")
         container = self.client.containers.get(self.name)
         container.stop()
-        print([container.name for container in self.client.containers.list()])
         sleep(10)
 
 
