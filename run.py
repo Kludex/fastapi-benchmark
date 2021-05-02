@@ -1,6 +1,7 @@
 import itertools
 import logging
 import os
+from time import sleep
 from typing import List, TypedDict
 
 import docker
@@ -21,31 +22,31 @@ def get_daphne_commands() -> List[Server]:
 def get_gunicorn_commands() -> List[Server]:
     return [
         Server(
-            name=f"gunicorn w/ {workers} workers and {threads} threads",
+            name=f"gunicorn {workers}-{threads}",
             command=f"gunicorn -k uvicorn.workers.UvicornWorker -w {workers} --threads {threads} --log-level error main:app -b '0.0.0.0:8000'",
         )
-        for workers, threads in itertools.product(range(1, 2), range(1, 2))
+        for workers, threads in itertools.product(range(1, 9), range(1, 9))
     ]
 
 
 def get_uvicorn_commands() -> List[Server]:
     return [
         Server(
-            name=f"uvicorn w/ {workers} workers",
+            name=f"uvicorn {workers}",
             command=f"uvicorn --workers {workers} --log-level error main:app --host 0.0.0.0 --port 8000",
         )
-        for workers in range(1, 2)
+        for workers in range(1, 9)
     ]
 
 
 def get_hypercorn_commands() -> List[Server]:
     return [
         Server(
-            name=f"hypercorn w/ {loop} loop and {workers} workers",
+            name=f"hypercorn {loop}-{workers}",
             command=f"hypercorn -k {loop} -w {workers} --log-level error main:app -b '0.0.0.0:8000'",
         )
         for loop, workers in itertools.product(
-            ["asyncio", "uvloop", "trio"], range(1, 2)
+            ["asyncio", "uvloop", "trio"], range(1, 9)
         )
     ]
 
@@ -79,7 +80,9 @@ class DockerSetup:
 
     def __exit__(self, *exc):
         logger.info("Stopping container.")
-        self.client.containers.get(self.name).stop()
+        container = self.client.containers.get(self.name)
+        container.stop()
+        sleep(10)
 
 
 if __name__ == "__main__":
@@ -94,10 +97,11 @@ if __name__ == "__main__":
 
     client = docker.from_env()
     logger.info("Building image.")
-    # client.images.build(path=path, nocache=True)
+    client.images.build(path=path, nocache=True, tag="app")
+    client.networks.create(network)
 
     for server in servers:
-        logger.info("Start benchmark for %s", server["name"])
+        logger.info("Start benchmark for %s.", server["name"])
         with DockerSetup(
             client=client,
             path=path,
@@ -113,6 +117,7 @@ if __name__ == "__main__":
                     "NAME": server["name"],
                     "FILENAME": "/results/results.csv",
                 },
+                remove=True,
                 network=network,
                 volumes={
                     os.path.join(path, "scripts"): {"bind": "/scripts", "mode": "rw"},
