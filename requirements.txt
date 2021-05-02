@@ -1,0 +1,6 @@
+gunicorn==20.1.0
+uvicorn[standard]==0.13.4
+fastapi==0.63.0
+daphne==3.0.1
+hypercorn==0.11.2
+trio==0.18.0
